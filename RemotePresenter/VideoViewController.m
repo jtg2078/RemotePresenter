@@ -91,18 +91,24 @@
     // Do any additional setup after loading the view from its nib.
     
     NSNotificationCenter *df = [NSNotificationCenter defaultCenter];
-    [df addObserver:self selector:@selector(handlePlaybackInfo:)
+    [df addObserver:self
+           selector:@selector(handlePlaybackInfo:)
                name:@"PlaybackInfoNotification"
+             object:nil];
+    
+    [df addObserver:self
+           selector:@selector(handleMovieFinished:) name:@"MPMoviePlayerPlaybackDidFinishNotification"
              object:nil];
     
     [self setupPlayer];
     
     _placeholderView = [[UIView alloc] init];
     _placeholderView.frame = CGRectMake(0, 0, 748, 1024);
-    UIImageView *imgView = [[[UIImageView alloc] initWithImage:[UIImage imageNamed:@"cover.jpg"]] autorelease];
+    UIImageView *imgView = [[[UIImageView alloc] initWithImage:[UIImage imageNamed:@"intermission.jpg"]] autorelease];
     imgView.frame = CGRectMake(0, 0, 748, 1024);
     [_placeholderView addSubview:imgView];
-    self.placeholderView.backgroundColor = [UIColor orangeColor];
+    
+    //[self.player.backgroundView addSubview:self.placeholderView];
 }
 
 - (void)viewDidUnload
@@ -165,11 +171,13 @@
     [self playMovie];
 }
 
+- (void)handleMovieFinished:(NSNotification *)notif
+{
+    [self.player stop];
+}
+
 - (void)showPlaceHolderFor:(NSTimeInterval)duration
 {
-    
-    
-    
     /*
     self.pvc.view.alpha = 0.8f;
     [UIView transitionWithView:self.pvc.view

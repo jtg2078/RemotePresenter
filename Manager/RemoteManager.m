@@ -64,7 +64,7 @@
 
 - (void)appBecameActive:(NSNotification *)notif
 {
-    [self openConnection];
+    //[self openConnection];
 }
 
 #pragma mark - SRWebSocketDelegate

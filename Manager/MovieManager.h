@@ -22,12 +22,15 @@ typedef enum{
 {
     SRWebSocket *webSocket;
     JSONDecoder *decoder;
+    NSRange notFound;
 }
 
 @property (assign, nonatomic) int currentMovieId;
 @property (assign, nonatomic) NSTimeInterval currentMovieTimestamp;
 @property (assign, nonatomic) PlaybackMode currentPlayMode;
 @property (retain, nonatomic) NSArray *moviesArray;
+@property (retain, nonatomic) NSDate *pingSentTime;
+@property (retain, nonatomic) NSDate *pingReceivedTime;
 
 + (MovieManager *)sharedInstance;
 

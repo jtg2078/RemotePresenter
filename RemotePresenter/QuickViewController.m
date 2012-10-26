@@ -51,6 +51,8 @@
     [_player.backgroundView addSubview:bg];
      */
     
+    
+    
     [self.view addSubview: _player.view];
 }
 

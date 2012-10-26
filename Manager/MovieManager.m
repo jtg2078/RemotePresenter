@@ -32,7 +32,21 @@
 
 - (void)setup
 {
-    NSString *urlString = @"ws://ec2-54-242-8-110.compute-1.amazonaws.com:8080/ws/connect";
+    NSString *urlString = nil;
+    if(IS_USING_WILL)
+    {
+        NSString *uuid = [[UIDevice currentDevice] uniqueIdentifier];
+        
+        if(IS_USING_LOCAL)
+            urlString = [NSString stringWithFormat:@"ws://192.168.77.77/sync.ashx?username=%@", uuid];
+        else 
+            urlString = [NSString stringWithFormat:@"ws://61.62.220.19:60080/WebSockets/chat.ashx?username=%@", uuid];
+    }
+    else
+    {
+        urlString = @"ws://ec2-54-242-8-110.compute-1.amazonaws.com:8080/ws/connect";
+    }
+    
     NSURL *url = [NSURL URLWithString:urlString];
     NSURLRequest *request = [NSURLRequest requestWithURL:url];
     webSocket = [[SRWebSocket alloc] initWithURLRequest:request];
@@ -47,20 +61,49 @@
                  object:nil];
     
     // playback stuff
+    /*
     self.moviesArray = [NSArray arrayWithObjects:
                         @"b_001",
                         @"b_002",
                         @"b_003",
                         nil];
+     */
+    self.moviesArray = [NSArray arrayWithObjects:
+                        @"1",
+                        @"2",
+                        @"3",
+                        @"4",
+                        @"5",
+                        @"6",
+                        @"7",
+                        nil];
     
     // misc
     decoder = [[JSONDecoder decoder] retain];
+    notFound = NSMakeRange(NSNotFound, 0);
+    
+    NSTimer *timer1 = [NSTimer timerWithTimeInterval:2.0
+                                              target:self
+                                            selector:@selector(isAlive)
+                                            userInfo:nil
+                                             repeats:YES];
+    
+    NSTimer *timer2 = [NSTimer timerWithTimeInterval:1.0
+                                              target:self
+                                            selector:@selector(sendPing)
+                                            userInfo:nil
+                                             repeats:YES];
+    
+    [[NSRunLoop currentRunLoop] addTimer:timer1 forMode:NSDefaultRunLoopMode];
+    [[NSRunLoop currentRunLoop] addTimer:timer2 forMode:NSDefaultRunLoopMode];
 }
 
 #pragma mark - main methods
 
 - (void)openConnection
 {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self];
+    
     SRReadyState state = webSocket.readyState;
     
     if(webSocket && state == SR_CONNECTING)
@@ -83,8 +126,16 @@
     
     [p setObject:detail forKey:@"detail"];
     
-    NSData *jsonData =[p JSONData];
-    [webSocket send:jsonData];
+    if(IS_USING_WILL)
+    {
+        NSString *jsonString = [p JSONString];
+        [webSocket send:jsonString];
+    }
+    else
+    {
+        NSData *jsonData =[p JSONData];
+        [webSocket send:jsonData];
+    }
 }
 
 - (void)login
@@ -104,8 +155,17 @@
     
     [p setObject:detail forKey:@"detail"];
     
-    NSData *jsonData =[p JSONData];
-    [webSocket send:jsonData];
+    
+    if(IS_USING_WILL)
+    {
+        NSString *jsonString = [p JSONString];
+        [webSocket send:jsonString];
+    }
+    else
+    {
+        NSData *jsonData =[p JSONData];
+        [webSocket send:jsonData];
+    }
 }
 
 - (void)queryPlayback
@@ -114,8 +174,44 @@
     [p setObject:@"inqury" forKey:@"type"];
     [p setObject:[NSDictionary dictionary] forKey:@"detail"];
     
-    NSData *jsonData =[p JSONData];
-    [webSocket send:jsonData];
+    if(IS_USING_WILL)
+    {
+        NSString *jsonString = [p JSONString];
+        [webSocket send:jsonString];
+    }
+    else
+    {
+        NSData *jsonData =[p JSONData];
+        [webSocket send:jsonData];
+    }
+    
+    self.pingSentTime = [NSDate date];
+}
+
+- (void)isAlive
+{
+    NSTimeInterval time = [self.pingReceivedTime timeIntervalSinceDate:[NSDate date]];
+    if(abs(time) > 3)
+        [self openConnection];
+    NSLog(@"ping diff time: %d", abs(time));
+}
+
+- (void)sendPing
+{
+    NSMutableDictionary *p = [NSMutableDictionary dictionary];
+    [p setObject:@"ping" forKey:@"type"];
+    [p setObject:[NSDictionary dictionary] forKey:@"detail"];
+    
+    if(IS_USING_WILL)
+    {
+        NSString *jsonString = [p JSONString];
+        [webSocket send:jsonString];
+    }
+    else
+    {
+        NSData *jsonData =[p JSONData];
+        [webSocket send:jsonData];
+    }
 }
 
 #pragma mark - App State
@@ -132,11 +228,33 @@
     NSNotificationCenter *df = [NSNotificationCenter defaultCenter];
     
     NSString *jsonString = (NSString *)message;
-    NSDictionary *payload = [jsonString objectFromJSONString];
+    
+    NSLog(@"%@", jsonString);
+    
+    NSString *from = nil;
+    
+    NSDictionary *payload = nil;
+    if(IS_USING_WILL)
+    {
+        NSRange rangeOfFirstColon = [jsonString rangeOfString:@":"];
+        
+        if(NSEqualRanges(rangeOfFirstColon, notFound) == NO)
+        {
+            NSString *cleaned = [jsonString substringFromIndex:rangeOfFirstColon.location + 2];
+            from = [jsonString substringToIndex:rangeOfFirstColon.location];
+            
+            NSError *error = nil;
+            payload = [cleaned objectFromJSONStringWithParseOptions:JKParseOptionNone error:&error];
+        }
+    }
+    else
+    {
+        payload = [jsonString objectFromJSONString];
+    }
     
     NSString *payloadType = [payload objectForKey:@"type"];
     
-    if([payloadType isEqualToString:@"playbackInfo"] == YES)
+    if([payloadType isEqualToString:@"playbackInfo"] == YES || [payloadType isEqualToString:@"change"] == YES)
     {
         NSDictionary *playInfo = [payload objectForKey:@"detail"];
         
@@ -150,6 +268,13 @@
     {
         NSDictionary *loginInfo = [payload objectForKey:@"detail"];
         [df postNotificationName:@"LoginInfoNotification" object:self userInfo:loginInfo];
+    }
+    else if([payloadType isEqualToString:@"ping"] == YES)
+    {
+        if(from && [from isEqualToString:[[UIDevice currentDevice] uniqueIdentifier]] == YES)
+        {
+            self.pingReceivedTime = [NSDate date];
+        }
     }
 }
 
@@ -170,7 +295,11 @@
            reason:(NSString *)reason
          wasClean:(BOOL)wasClean
 {
-    NSLog(@"did closed");
+    NSLog(@"webSocket did closed");
+    
+    [self performSelector:@selector(openConnection)
+               withObject:nil
+               afterDelay:1.0];
 }
 
 #pragma mark - singleton implementation code

@@ -9,3 +9,5 @@
 #import <Foundation/Foundation.h>
 
 extern BOOL const IS_TEACHER_MODE;
+extern BOOL const IS_USING_WILL;
+extern BOOL const IS_USING_LOCAL;

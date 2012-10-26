@@ -40,6 +40,9 @@
     self.window.rootViewController = nav_mvc;
      */
     
+    [[UIApplication sharedApplication] setStatusBarHidden:NO
+                                            withAnimation:UIStatusBarAnimationFade];
+    
     BOOL isTeacherMode = IS_TEACHER_MODE;
     
     if(isTeacherMode)
@@ -60,8 +63,6 @@
     }
     else
     {
-        [[UIApplication sharedApplication] setStatusBarHidden:NO
-                                                withAnimation:UIStatusBarAnimationFade];
         VideoViewController *vvc = [[[VideoViewController alloc] init] autorelease];
         self.window.rootViewController = vvc;
     }
