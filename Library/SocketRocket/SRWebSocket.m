@@ -385,6 +385,9 @@ static __strong NSData *CRLFCRLF;
 
 - (void)open;
 {
+    if(_readyState != SR_CONNECTING)
+        return;
+    
     assert(_url);
     NSAssert(_readyState == SR_CONNECTING, @"Cannot call -(void)open on SRWebSocket more than once");
 
@@ -695,6 +698,9 @@ static __strong NSData *CRLFCRLF;
 }
 - (void)send:(id)data;
 {
+    if(self.readyState == SR_CONNECTING)
+        return;
+    
     NSAssert(self.readyState != SR_CONNECTING, @"Invalid State: Cannot call send: until connection is open");
     // TODO: maybe not copy this for performance
     data = [data copy];

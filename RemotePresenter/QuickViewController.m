@@ -16,6 +16,7 @@
 
 #pragma mark - synthesize
 
+@synthesize timer1 = _timer1;
 @synthesize player = _player;
 
 #pragma mark - dealloc
@@ -39,21 +40,18 @@
 
 - (void)setupPlayer
 {
+    UIImageView *imgView = [[[UIImageView alloc] initWithImage:[UIImage imageNamed:@"intermission.jpg"]] autorelease];
+    imgView.frame = CGRectMake(10, 10, 1024 - 320 - 20, 768 - 20 - 44 - 20);
+    
+    [self.view addSubview:imgView];
+    
     _player = [[MPMoviePlayerController alloc] init];
     _player.controlStyle = MPMovieControlStyleEmbedded;
-    //_player.view.frame = CGRectMake(100, 100, 500, 500);
     _player.view.frame = CGRectMake(10, 10, 1024 - 320 - 20, 768 - 20 - 44 - 20);
     _player.shouldAutoplay = NO;
-    /*
-    UIView *bg = [[[UIView alloc] init] autorelease];
-    bg.frame = CGRectMake(0, 0, 100, 100);
-    bg.backgroundColor = [UIColor yellowColor];
-    [_player.backgroundView addSubview:bg];
-     */
-    
-    
     
     [self.view addSubview: _player.view];
+    self.player.view.hidden = YES;
 }
 
 - (void)setupNotification
@@ -78,51 +76,11 @@
 
 #pragma mark - handling playback notification
 
-/*
- 2012-10-24 12:29:05.098 RemotePresenter[257:707] did failed
- 2012-10-24 12:29:08.357 RemotePresenter[257:707] player load state changed: 3
- 2012-10-24 12:29:14.088 RemotePresenter[257:707] playback state changed: 1
- 2012-10-24 12:29:17.511 RemotePresenter[257:707] playback state changed: 2
- 2012-10-24 12:29:19.189 RemotePresenter[257:707] playback state changed: 1
- 2012-10-24 12:29:22.924 RemotePresenter[257:707] playback state changed: 0
- 2012-10-24 12:29:22.929 RemotePresenter[257:707] player load state changed: 0
- 2012-10-24 12:29:22.948 RemotePresenter[257:707] playback finished
- 2012-10-24 12:29:23.173 RemotePresenter[257:707] player load state changed: 3
- 2012-10-24 12:29:29.284 RemotePresenter[257:707] playback state changed: 1
- 2012-10-24 12:29:31.265 RemotePresenter[257:707] playback state changed: 0
- 2012-10-24 12:29:31.276 RemotePresenter[257:707] player load state changed: 0
- 2012-10-24 12:29:31.294 RemotePresenter[257:707] playback finished
- 2012-10-24 12:29:31.513 RemotePresenter[257:707] player load state changed: 3
- 2012-10-24 12:29:49.791 RemotePresenter[257:707] playback state changed: 1
- 2012-10-24 12:29:52.030 RemotePresenter[257:707] playback state changed: 0
- 2012-10-24 12:29:52.038 RemotePresenter[257:707] player load state changed: 0
- 2012-10-24 12:29:52.058 RemotePresenter[257:707] playback finished
- 2012-10-24 12:29:52.280 RemotePresenter[257:707] player load state changed: 3
- */
-
- /*
- enum {
- MPMovieLoadStateUnknown        = 0,
- MPMovieLoadStatePlayable       = 1 << 0,
- MPMovieLoadStatePlaythroughOK  = 1 << 1,
- MPMovieLoadStateStalled        = 1 << 2,
- };
- */
 - (void)loadStateChanged:(NSNotification *)notif
 {
     NSLog(@"player load state changed: %d", self.player.loadState);
 }
 
-/*
- enum {
- MPMoviePlaybackStateStopped,
- MPMoviePlaybackStatePlaying,
- MPMoviePlaybackStatePaused,
- MPMoviePlaybackStateInterrupted,
- MPMoviePlaybackStateSeekingForward,
- MPMoviePlaybackStateSeekingBackward
- };
- */
 - (void)playbackStateChanged:(NSNotification *)notif
 {
     NSLog(@"playback state changed: %d time:%f",
@@ -136,22 +94,31 @@
     [self.movieManager updatePlaybackInfo:movieId time:currentTime action:action];
 }
 
-/*
- enum {
- MPMovieFinishReasonPlaybackEnded,
- MPMovieFinishReasonPlaybackError,
- MPMovieFinishReasonUserExited
- };
- */
 - (void)playbackDidFinish:(NSNotification *)notif
 {
+    int movieId = videoId;
+    NSTimeInterval currentTime = self.player.currentPlaybackTime;
+    int action = MPMoviePlaybackStateStopped;
+    
+    [self.movieManager updatePlaybackInfo:movieId time:currentTime action:action];
+    
     NSLog(@"playback finished");
+}
+
+- (void)updatePlaybackTime
+{
+    NSTimeInterval currentTime = self.player.currentPlaybackTime;
+    if (!isnan(currentTime))
+        self.movieManager.currentMovieTimestamp = currentTime;
 }
 
 #pragma mark - main methods
 
 - (void)playMovie:(NSString *)movieName movieId:(int)movieId
 {
+    if(self.player.view.hidden == YES)
+        self.player.view.hidden = NO;
+    
     // play the movie
     NSString *filePath = [[NSBundle mainBundle] pathForResource:movieName ofType:@"m4v"];
     NSURL *fileURL = [NSURL fileURLWithPath:filePath];
@@ -160,6 +127,8 @@
     [self.player prepareToPlay];
     
     videoId = movieId;
+    self.title = [NSString stringWithFormat:@"%d", movieId + 1];
+    [self.player play];
 }
 
 #pragma mark - view lifecycle
@@ -168,7 +137,7 @@
 {
     [super viewDidLoad];
 	// Do any additional setup after loading the view.
-    self.view.backgroundColor = [UIColor whiteColor];
+    self.view.backgroundColor = [UIColor clearColor];
     
     [self setupPlayer];
     [self setupNotification];
@@ -178,6 +147,27 @@
 {
     [super viewDidUnload];
     // Release any retained subviews of the main view.
+}
+
+- (void)viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
+    
+    self.timer1 = [NSTimer timerWithTimeInterval:1.0
+                                          target:self
+                                        selector:@selector(updatePlaybackTime)
+                                        userInfo:nil
+                                         repeats:YES];
+    
+    [[NSRunLoop currentRunLoop] addTimer:self.timer1 forMode:NSDefaultRunLoopMode];
+}
+
+- (void)viewDidDisappear:(BOOL)animated
+{
+    [self.timer1 invalidate];
+    self.timer1 = nil;
+    
+    [super viewDidDisappear:animated];
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation

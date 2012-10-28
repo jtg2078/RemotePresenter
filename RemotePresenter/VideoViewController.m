@@ -18,7 +18,6 @@
 
 @synthesize player = _player;
 @synthesize myView = _myView;
-@synthesize placeholderView = _placeholderView;
 @synthesize pvc = _pvc;
 
 #pragma mark - dealloc
@@ -27,7 +26,6 @@
 {
     [_player release];
     [_myView release];
-    [_placeholderView release];
     [_pvc release];
     
     [[NSNotificationCenter defaultCenter] removeObserver:self];
@@ -101,14 +99,6 @@
              object:nil];
     
     [self setupPlayer];
-    
-    _placeholderView = [[UIView alloc] init];
-    _placeholderView.frame = CGRectMake(0, 0, 748, 1024);
-    UIImageView *imgView = [[[UIImageView alloc] initWithImage:[UIImage imageNamed:@"intermission.jpg"]] autorelease];
-    imgView.frame = CGRectMake(0, 0, 748, 1024);
-    [_placeholderView addSubview:imgView];
-    
-    //[self.player.backgroundView addSubview:self.placeholderView];
 }
 
 - (void)viewDidUnload
@@ -122,11 +112,15 @@
 
 - (void)playMovie
 {
+    if(self.movieManager.currentPlayMode == MPMoviePlaybackStateStopped)
+    {
+        [self.player stop];
+        return;
+    }
+    
     // play the movie
     if (currentVideoId != self.movieManager.currentMovieId)
-    {
-        //[self showPlaceHolderFor:3.3];
-        
+    {        
         NSString *movieName = [self.movieManager.moviesArray objectAtIndex:self.movieManager.currentMovieId];
         NSString *filePath = [[NSBundle mainBundle] pathForResource:movieName ofType:@"m4v"];
         NSURL *fileURL = [NSURL fileURLWithPath:filePath];
@@ -135,34 +129,17 @@
         [self.player prepareToPlay];
         
         currentVideoId = self.movieManager.currentMovieId;
-        
-        
     }
-    self.player.currentPlaybackTime = self.movieManager.currentMovieTimestamp;
     
-    /*
-     enum {
-     MPMoviePlaybackStateStopped,
-     MPMoviePlaybackStatePlaying,
-     MPMoviePlaybackStatePaused,
-     MPMoviePlaybackStateInterrupted,
-     MPMoviePlaybackStateSeekingForward,
-     MPMoviePlaybackStateSeekingBackward
-     };
-     */
+    self.player.currentPlaybackTime = self.movieManager.currentMovieTimestamp;
     
     if(self.movieManager.currentPlayMode == MPMoviePlaybackStatePlaying)
     {
-        
         [self.player play];
     }
     else if(self.movieManager.currentPlayMode == MPMoviePlaybackStatePaused)
     {
         [self.player pause];
-    }
-    else if(self.movieManager.currentPlayMode == MPMoviePlaybackStateStopped)
-    {
-        [self.player stop];
     }
 }
 

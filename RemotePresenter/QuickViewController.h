@@ -16,6 +16,7 @@
 }
 
 @property (nonatomic, retain) MPMoviePlayerController *player;
+@property (retain, nonatomic) NSTimer *timer1;
 
 - (void)playMovie:(NSString *)movieName movieId:(int)movieId;
 

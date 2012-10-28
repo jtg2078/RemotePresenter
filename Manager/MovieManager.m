@@ -10,12 +10,26 @@
 
 @implementation MovieManager
 
+#pragma mark - synthesize
+
+@synthesize currentMovieId = _currentMovieId;
+@synthesize currentMovieTimestamp = _currentMovieTimestamp;
+@synthesize currentPlayMode = _currentPlayMode;
+@synthesize moviesArray = _moviesArray;
+@synthesize pingSentTime = _pingSentTime;
+@synthesize pingReceivedTime = _pingReceivedTime;
+@synthesize timer1 = _timer1;
+@synthesize timer2 = _timer2;
+
 #pragma mark - dealloc
 
 - (void)dealloc
 {
     [webSocket release];
     [decoder release];
+    [_moviesArray release];
+    [_pingSentTime release];
+    [_pingReceivedTime release];
     [super dealloc];
 }
 
@@ -60,14 +74,14 @@
                    name:UIApplicationDidBecomeActiveNotification
                  object:nil];
     
+    [center addObserver:self
+               selector:@selector(appWillResignActive:)
+                   name:UIApplicationWillResignActiveNotification
+                 object:nil];
+    
+    
     // playback stuff
-    /*
-    self.moviesArray = [NSArray arrayWithObjects:
-                        @"b_001",
-                        @"b_002",
-                        @"b_003",
-                        nil];
-     */
+    
     self.moviesArray = [NSArray arrayWithObjects:
                         @"1",
                         @"2",
@@ -81,21 +95,6 @@
     // misc
     decoder = [[JSONDecoder decoder] retain];
     notFound = NSMakeRange(NSNotFound, 0);
-    
-    NSTimer *timer1 = [NSTimer timerWithTimeInterval:2.0
-                                              target:self
-                                            selector:@selector(isAlive)
-                                            userInfo:nil
-                                             repeats:YES];
-    
-    NSTimer *timer2 = [NSTimer timerWithTimeInterval:1.0
-                                              target:self
-                                            selector:@selector(sendPing)
-                                            userInfo:nil
-                                             repeats:YES];
-    
-    [[NSRunLoop currentRunLoop] addTimer:timer1 forMode:NSDefaultRunLoopMode];
-    [[NSRunLoop currentRunLoop] addTimer:timer2 forMode:NSDefaultRunLoopMode];
 }
 
 #pragma mark - main methods
@@ -104,18 +103,17 @@
 {
     [NSObject cancelPreviousPerformRequestsWithTarget:self];
     
-    SRReadyState state = webSocket.readyState;
-    
-    if(webSocket && state == SR_CONNECTING)
-    {
-        [webSocket open];
-    }
+    [webSocket open];
 }
 
 - (void)updatePlaybackInfo:(int)videoId
                       time:(NSTimeInterval)playbackTime
                     action:(int)action
 {
+    self.currentMovieId = videoId;
+    self.currentMovieTimestamp = playbackTime;
+    self.currentPlayMode = action;
+    
     NSMutableDictionary *p = [NSMutableDictionary dictionary];
     [p setObject:@"change" forKey:@"type"];
     
@@ -219,11 +217,34 @@
 - (void)appBecameActive:(NSNotification *)notif
 {
     [self openConnection];
+    
+    self.timer1 = [NSTimer timerWithTimeInterval:2.0
+                                          target:self
+                                        selector:@selector(isAlive)
+                                        userInfo:nil
+                                         repeats:YES];
+    
+    self.timer2 = [NSTimer timerWithTimeInterval:1.0
+                                          target:self
+                                        selector:@selector(sendPing)
+                                        userInfo:nil
+                                         repeats:YES];
+    
+    [[NSRunLoop currentRunLoop] addTimer:self.timer1 forMode:NSDefaultRunLoopMode];
+    [[NSRunLoop currentRunLoop] addTimer:self.timer2 forMode:NSDefaultRunLoopMode];
+}
+
+- (void)appWillResignActive:(NSNotification *)notif
+{
+    [self.timer1 invalidate];
+    self.timer1 = nil;
+    [self.timer2 invalidate];
+    self.timer2 = nil;
 }
 
 #pragma mark - SRWebSocketDelegate
 
-- (void)webSocket:(SRWebSocket *)webSocket didReceiveMessage:(id)message
+- (void)webSocket:(SRWebSocket *)_webSocket didReceiveMessage:(id)message
 {
     NSNotificationCenter *df = [NSNotificationCenter defaultCenter];
     
@@ -256,13 +277,16 @@
     
     if([payloadType isEqualToString:@"playbackInfo"] == YES || [payloadType isEqualToString:@"change"] == YES)
     {
-        NSDictionary *playInfo = [payload objectForKey:@"detail"];
-        
-        self.currentMovieId = [[playInfo objectForKey:@"videoId"] intValue];
-        self.currentMovieTimestamp = [[playInfo objectForKey:@"timestamp"] doubleValue];
-        self.currentPlayMode = [[playInfo objectForKey:@"action"] intValue];
-        
-        [df postNotificationName:@"PlaybackInfoNotification" object:self userInfo:nil];
+        if(IS_TEACHER_MODE == NO)
+        {
+            NSDictionary *playInfo = [payload objectForKey:@"detail"];
+            
+            self.currentMovieId = [[playInfo objectForKey:@"videoId"] intValue];
+            self.currentMovieTimestamp = [[playInfo objectForKey:@"timestamp"] doubleValue];
+            self.currentPlayMode = [[playInfo objectForKey:@"action"] intValue];
+            
+            [df postNotificationName:@"PlaybackInfoNotification" object:self userInfo:nil];
+        }
     }
     else if([payloadType isEqualToString:@"loginInfo"] == YES)
     {
@@ -276,13 +300,49 @@
             self.pingReceivedTime = [NSDate date];
         }
     }
+    else if([payloadType isEqualToString:@"inqury"] == YES)
+    {
+        if(IS_USING_WILL && IS_TEACHER_MODE)
+        {
+            NSMutableDictionary *p = [NSMutableDictionary dictionary];
+            [p setObject:@"RespondInqury" forKey:@"type"];
+            
+            NSMutableDictionary *detail = [NSMutableDictionary dictionary];
+            [detail setObject:from      forKey:@"to"];
+            [detail setObject:[NSNumber numberWithInt:self.currentMovieId]      forKey:@"videoId"];
+            [detail setObject:[NSNumber numberWithInt:self.currentMovieTimestamp] forKey:@"timestamp"];
+            [detail setObject:[NSNumber numberWithInt:self.currentPlayMode]       forKey:@"action"];
+            
+            [p setObject:detail forKey:@"detail"];
+            
+            NSString *jsonString = [p JSONString];
+            [webSocket send:jsonString];
+        }
+    }
+    else if([payloadType isEqualToString:@"RespondInqury"] == YES)
+    {
+        if(IS_USING_WILL && IS_TEACHER_MODE == NO)
+        {
+            NSDictionary *playInfo = [payload objectForKey:@"detail"];
+            NSString *to = [playInfo objectForKey:@"to"];
+            if([to isEqualToString:[[UIDevice currentDevice] uniqueIdentifier]] == YES)
+            {
+                self.currentMovieId = [[playInfo objectForKey:@"videoId"] intValue];
+                self.currentMovieTimestamp = [[playInfo objectForKey:@"timestamp"] doubleValue];
+                self.currentPlayMode = [[playInfo objectForKey:@"action"] intValue];
+                
+                [df postNotificationName:@"PlaybackInfoNotification" object:self userInfo:nil];
+            }
+        }
+    }
 }
 
 - (void)webSocketDidOpen:(SRWebSocket *)_webSocket
 {
     [self login];
     
-    [self queryPlayback];
+    if(IS_TEACHER_MODE == NO)
+        [self queryPlayback];
 }
 
 - (void)webSocket:(SRWebSocket *)webSocket didFailWithError:(NSError *)error

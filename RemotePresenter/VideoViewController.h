@@ -19,9 +19,5 @@
 @property (nonatomic, retain) MPMoviePlayerController *player;
 @property (nonatomic, retain) PlaceholderViewController *pvc;
 @property (retain, nonatomic) IBOutlet UIView *myView;
-@property (retain, nonatomic) UIView *placeholderView;
-
-
-
 
 @end

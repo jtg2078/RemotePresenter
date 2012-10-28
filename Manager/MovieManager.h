@@ -11,13 +11,6 @@
 #import "JSONKit.h"
 #import "Constants.h"
 
-typedef enum{
-    PlaybackModePauseAtBegin = 0,
-    PlaybackModePlay,
-    PlaybackModePause,
-}PlaybackMode;
-
-
 @interface MovieManager : NSObject  <SRWebSocketDelegate>
 {
     SRWebSocket *webSocket;
@@ -27,10 +20,13 @@ typedef enum{
 
 @property (assign, nonatomic) int currentMovieId;
 @property (assign, nonatomic) NSTimeInterval currentMovieTimestamp;
-@property (assign, nonatomic) PlaybackMode currentPlayMode;
+@property (assign, nonatomic) int currentPlayMode;
 @property (retain, nonatomic) NSArray *moviesArray;
 @property (retain, nonatomic) NSDate *pingSentTime;
 @property (retain, nonatomic) NSDate *pingReceivedTime;
+
+@property (retain, nonatomic) NSTimer *timer1;
+@property (retain, nonatomic) NSTimer *timer2;
 
 + (MovieManager *)sharedInstance;
 
