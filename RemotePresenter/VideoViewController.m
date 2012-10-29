@@ -19,6 +19,7 @@
 @synthesize player = _player;
 @synthesize myView = _myView;
 @synthesize pvc = _pvc;
+@synthesize imageView = _imageView;
 
 #pragma mark - dealloc
 
@@ -27,6 +28,7 @@
     [_player release];
     [_myView release];
     [_pvc release];
+    [_imageView release];
     
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [super dealloc];
@@ -52,35 +54,6 @@
     return self;
 }
 
-- (void)setupPlayer
-{
-    /*
-    NSString *docsPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
-    NSString *filePath = [docsPath stringByAppendingPathComponent:@"/b_002.m4v"];
-     */
-    
-    _pvc = [[PlaceholderViewController alloc] init];
-    
-    self.pvc.view.alpha = 1.0f;
-    [self.view addSubview:self.pvc.view];
-    
-    _player = [[MPMoviePlayerController alloc] init];
-    _player.shouldAutoplay = NO;
-    _player.controlStyle = MPMovieControlStyleNone;
-    [self.player.view setFrame: self.myView.bounds];  // player's frame must match parent's
-    [self.myView addSubview: self.player.view];
-}
-
--(BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
-
-{
-    return YES;
-    /*
-    BOOL isLandscapeRight = (UIInterfaceOrientationLandscapeRight == interfaceOrientation);
-    return isLandscapeRight;
-     */
-}
-
 #pragma mark - view lifecycle
 
 - (void)viewDidLoad
@@ -98,7 +71,24 @@
            selector:@selector(handleMovieFinished:) name:@"MPMoviePlayerPlaybackDidFinishNotification"
              object:nil];
     
-    [self setupPlayer];
+    _pvc = [[PlaceholderViewController alloc] init];
+    
+    //self.pvc.view.alpha = 1.0f;
+    //[self.view addSubview:self.pvc.view];
+    
+    _player = [[MPMoviePlayerController alloc] init];
+    _player.shouldAutoplay = NO;
+    _player.controlStyle = MPMovieControlStyleNone;
+    _player.fullscreen = NO;
+    _player.view.frame = self.myView.bounds;
+    
+    _imageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"intermission.jpg"]];
+    _imageView.contentMode = UIViewContentModeScaleAspectFill;
+    _imageView.frame = _player.view.bounds;
+    
+    [_player.view addSubview:_imageView];
+    
+    [self.myView addSubview:self.player.view];
 }
 
 - (void)viewDidUnload
@@ -108,17 +98,106 @@
     [super viewDidUnload];
 }
 
+-(BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
+{
+    return YES;
+}
+
 #pragma mark - main methods
 
-- (void)playMovie
+- (void)playerStopOrPlay:(PlayerControl)control animated:(BOOL)animated
+{
+    NSLog(@"playerStopOrPlay called with mode %d", control);
+    
+    float alpha = 0.0f;
+    if(control == PlayerControlPlay)
+    {
+        alpha = 0.0f;
+        [self.player play];
+    }
+    else if(control == PlayerControlStop)
+    {
+        alpha = 1.0f;
+        [self.player stop];
+    }
+    
+    if(animated)
+    {
+        UIViewAnimationOptions options = UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionCurveEaseInOut;
+        
+        [UIView animateWithDuration:0.5f
+                              delay:0.0f
+                            options:options
+                         animations:^{
+                             self.imageView.alpha = alpha;
+                         }
+                         completion:^(BOOL finished) {
+                             self.imageView.alpha = alpha;
+                         }];
+    }
+    else
+    {
+        self.imageView.alpha = alpha;
+    }
+}
+
+- (void)playPlayerAnimated_old:(BOOL)animated
+{
+    [self.player play];
+    
+    if(animated)
+    {
+        UIViewAnimationOptions options = UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionCurveEaseInOut;
+        
+        [UIView animateWithDuration:0.5f
+                              delay:0.0f
+                            options:options
+                         animations:^{
+                             self.imageView.alpha = 0.0f;
+                         }
+                         completion:^(BOOL finished) {
+                             self.imageView.alpha = 0.0f;
+                         }];
+    }
+    else
+    {
+        self.imageView.alpha = 0.0f;
+    }
+}
+
+- (void)stopPlayerAnimated_old:(BOOL)animated
+{
+    [self.player stop];
+    
+    if(animated)
+    {
+        UIViewAnimationOptions options = UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionCurveEaseInOut;
+        
+        [UIView animateWithDuration:1.0f
+                              delay:0.0f
+                            options:options
+                         animations:^{
+                             self.imageView.alpha = 1.0f;
+                         }
+                         completion:^(BOOL finished) {
+                             self.imageView.alpha = 1.0f;
+                         }];
+    }
+    else
+    {
+        self.imageView.alpha = 1.0f;
+    }
+}
+
+- (void)updatePlayer
 {
     if(self.movieManager.currentPlayMode == MPMoviePlaybackStateStopped)
     {
-        [self.player stop];
+        [self playerStopOrPlay:PlayerControlStop animated:YES];
         return;
     }
     
-    // play the movie
+    // load the movie into memory
     if (currentVideoId != self.movieManager.currentMovieId)
     {        
         NSString *movieName = [self.movieManager.moviesArray objectAtIndex:self.movieManager.currentMovieId];
@@ -131,11 +210,15 @@
         currentVideoId = self.movieManager.currentMovieId;
     }
     
-    self.player.currentPlaybackTime = self.movieManager.currentMovieTimestamp;
+    NSLog(@"duration time is: %f, time from manager is: %f mode is:%d", self.player.playableDuration, self.movieManager.currentMovieTimestamp, self.movieManager.currentPlayMode);
+    
+    if(self.player.playableDuration > self.movieManager.currentMovieTimestamp)
+        self.player.currentPlaybackTime = self.movieManager.currentMovieTimestamp;
     
     if(self.movieManager.currentPlayMode == MPMoviePlaybackStatePlaying)
     {
-        [self.player play];
+        //[self.player play];
+        [self playerStopOrPlay:PlayerControlPlay animated:YES];
     }
     else if(self.movieManager.currentPlayMode == MPMoviePlaybackStatePaused)
     {
@@ -145,12 +228,15 @@
 
 - (void)handlePlaybackInfo:(NSNotification *)notif
 {
-    [self playMovie];
+    [self updatePlayer];
 }
 
 - (void)handleMovieFinished:(NSNotification *)notif
 {
-    [self.player stop];
+    //[self.player stop];
+    //NSNumber *reason = [notif.userInfo objectForKey:MPMoviePlayerPlaybackDidFinishReasonUserInfoKey];
+    //BOOL finishedNaturally = (reason.intValue == MPMovieFinishReasonPlaybackEnded);
+    [self playerStopOrPlay:PlayerControlStop animated:YES];
 }
 
 - (void)showPlaceHolderFor:(NSTimeInterval)duration

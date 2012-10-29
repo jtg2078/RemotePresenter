@@ -73,7 +73,7 @@
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
     
     if (cell == nil){
-        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] ;
+        cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] autorelease];
         cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;
         cell.textLabel.minimumFontSize = 10.0f;
         cell.textLabel.adjustsFontSizeToFitWidth = YES;
@@ -87,7 +87,9 @@
 
 - (void)configureCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath
 {
-    cell.textLabel.text = [movieManager.moviesArray objectAtIndex:indexPath.row];
+    NSString *name = [movieManager.namesArray objectAtIndex:indexPath.row];
+    NSString *str = [NSString stringWithFormat:@"%d. %@", indexPath.row + 1, name];
+    cell.textLabel.text = str;
 }
 
 #pragma mark - Table view delegate

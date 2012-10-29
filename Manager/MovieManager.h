@@ -22,6 +22,7 @@
 @property (assign, nonatomic) NSTimeInterval currentMovieTimestamp;
 @property (assign, nonatomic) int currentPlayMode;
 @property (retain, nonatomic) NSArray *moviesArray;
+@property (retain, nonatomic) NSArray *namesArray;
 @property (retain, nonatomic) NSDate *pingSentTime;
 @property (retain, nonatomic) NSDate *pingReceivedTime;
 

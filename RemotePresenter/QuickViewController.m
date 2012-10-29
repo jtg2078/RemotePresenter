@@ -41,6 +41,7 @@
 - (void)setupPlayer
 {
     UIImageView *imgView = [[[UIImageView alloc] initWithImage:[UIImage imageNamed:@"intermission.jpg"]] autorelease];
+    imgView.contentMode = UIViewContentModeScaleAspectFit;
     imgView.frame = CGRectMake(10, 10, 1024 - 320 - 20, 768 - 20 - 44 - 20);
     
     [self.view addSubview:imgView];
@@ -91,16 +92,19 @@
     NSTimeInterval currentTime = self.player.currentPlaybackTime;
     int action = self.player.playbackState;
     
-    [self.movieManager updatePlaybackInfo:movieId time:currentTime action:action];
+    if(willResignActive == NO)
+        [self.movieManager updatePlaybackInfo:movieId time:currentTime action:action];
 }
 
 - (void)playbackDidFinish:(NSNotification *)notif
 {
+    /*
     int movieId = videoId;
     NSTimeInterval currentTime = self.player.currentPlaybackTime;
     int action = MPMoviePlaybackStateStopped;
     
     [self.movieManager updatePlaybackInfo:movieId time:currentTime action:action];
+     */
     
     NSLog(@"playback finished");
 }
@@ -127,8 +131,28 @@
     [self.player prepareToPlay];
     
     videoId = movieId;
-    self.title = [NSString stringWithFormat:@"%d", movieId + 1];
+    NSString *name = [self.movieManager.namesArray objectAtIndex:movieId];
+    NSString *str = [NSString stringWithFormat:@"%d. %@", movieId + 1, name];
+    self.title = str;
     [self.player play];
+}
+
+- (void)manualSync
+{
+    int movieId = videoId;
+    NSTimeInterval currentTime = self.player.currentPlaybackTime;
+    int action = self.player.playbackState;
+    
+    [self.movieManager updatePlaybackInfo:movieId time:currentTime action:action];
+}
+
+- (void)showLogo
+{
+    int movieId = videoId;
+    NSTimeInterval currentTime = self.player.currentPlaybackTime;
+    int action = MPMoviePlaybackStateStopped;
+    
+    [self.movieManager updatePlaybackInfo:movieId time:currentTime action:action];
 }
 
 #pragma mark - view lifecycle
@@ -141,6 +165,20 @@
     
     [self setupPlayer];
     [self setupNotification];
+    
+    UIBarButtonItem *leftButton = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"手動同步", nil)
+                                                                   style:UIBarButtonItemStyleBordered
+                                                                  target:self
+                                                                  action:@selector(manualSync)];
+    
+    self.navigationItem.leftBarButtonItem = leftButton;
+    
+    UIBarButtonItem *rightButton = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"顯示logo", nil)
+                                                                   style:UIBarButtonItemStyleBordered
+                                                                  target:self
+                                                                  action:@selector(showLogo)];
+    
+    self.navigationItem.rightBarButtonItem = rightButton;
 }
 
 - (void)viewDidUnload
@@ -168,6 +206,18 @@
     self.timer1 = nil;
     
     [super viewDidDisappear:animated];
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    willResignActive = NO;
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    willResignActive = YES;
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation

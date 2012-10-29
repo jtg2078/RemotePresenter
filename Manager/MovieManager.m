@@ -7,6 +7,7 @@
 //
 
 #import "MovieManager.h"
+#import <AssetsLibrary/AssetsLibrary.h>
 
 @implementation MovieManager
 
@@ -16,6 +17,7 @@
 @synthesize currentMovieTimestamp = _currentMovieTimestamp;
 @synthesize currentPlayMode = _currentPlayMode;
 @synthesize moviesArray = _moviesArray;
+@synthesize namesArray = _namesArray;
 @synthesize pingSentTime = _pingSentTime;
 @synthesize pingReceivedTime = _pingReceivedTime;
 @synthesize timer1 = _timer1;
@@ -30,6 +32,7 @@
     [_moviesArray release];
     [_pingSentTime release];
     [_pingReceivedTime release];
+    [_namesArray release];
     [super dealloc];
 }
 
@@ -91,10 +94,40 @@
                         @"6",
                         @"7",
                         nil];
+    self.namesArray = [NSArray arrayWithObjects:
+                       @"調酒工藝背景",
+                       @"厚實果香風味",
+                       @"強烈的煙燻香氣",
+                       @"Odyssey影片介紹",
+                       @"香草、巧克力、太妃糖",
+                       @"葡萄乾果與葡萄酒",
+                       @"海島特色煙燻，鮮明的泥煤與海潮風",
+                       nil];
     
     // misc
     decoder = [[JSONDecoder decoder] retain];
     notFound = NSMakeRange(NSNotFound, 0);
+    
+    //add photo to photo library
+    NSUserDefaults *df = [NSUserDefaults standardUserDefaults];
+    BOOL photoInstalled = [df boolForKey:@"photoInstalled"];
+    if(photoInstalled == NO)
+    {
+        ALAssetsLibrary* library = [[ALAssetsLibrary alloc] init];
+        
+        UIImage *photo = [UIImage imageNamed:@"cover.png"];
+        [library writeImageToSavedPhotosAlbum:photo.CGImage orientation:ALAssetOrientationUp completionBlock:^(NSURL *assetURL, NSError *error) {
+            if(error)
+                NSLog(@"failed to save the image");
+            else
+            {
+                NSUserDefaults *df = [NSUserDefaults standardUserDefaults];
+                [df setBool:YES forKey:@"photoInstalled"];
+                [df synchronize];
+            }
+        }];
+        
+    }
 }
 
 #pragma mark - main methods
@@ -191,7 +224,7 @@
     NSTimeInterval time = [self.pingReceivedTime timeIntervalSinceDate:[NSDate date]];
     if(abs(time) > 3)
         [self openConnection];
-    NSLog(@"ping diff time: %d", abs(time));
+    //NSLog(@"ping diff time: %d", abs(time));
 }
 
 - (void)sendPing
@@ -250,7 +283,7 @@
     
     NSString *jsonString = (NSString *)message;
     
-    NSLog(@"%@", jsonString);
+    //NSLog(@"%@", jsonString);
     
     NSString *from = nil;
     

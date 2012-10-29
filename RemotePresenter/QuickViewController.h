@@ -13,6 +13,7 @@
 @interface QuickViewController : BaseViewController <UISplitViewControllerDelegate>
 {
     int videoId;
+    BOOL willResignActive;
 }
 
 @property (nonatomic, retain) MPMoviePlayerController *player;
