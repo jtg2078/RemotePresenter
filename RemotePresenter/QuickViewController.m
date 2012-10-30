@@ -172,6 +172,7 @@
                                                                   action:@selector(manualSync)];
     
     self.navigationItem.leftBarButtonItem = leftButton;
+    [leftButton release];
     
     UIBarButtonItem *rightButton = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"顯示logo", nil)
                                                                    style:UIBarButtonItemStyleBordered
@@ -179,6 +180,7 @@
                                                                   action:@selector(showLogo)];
     
     self.navigationItem.rightBarButtonItem = rightButton;
+    [rightButton release];
 }
 
 - (void)viewDidUnload

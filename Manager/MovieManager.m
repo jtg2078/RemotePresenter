@@ -107,13 +107,14 @@
     // misc
     decoder = [[JSONDecoder decoder] retain];
     notFound = NSMakeRange(NSNotFound, 0);
+    self.pingReceivedTime = [NSDate date];
     
     //add photo to photo library
     NSUserDefaults *df = [NSUserDefaults standardUserDefaults];
     BOOL photoInstalled = [df boolForKey:@"photoInstalled"];
     if(photoInstalled == NO)
     {
-        ALAssetsLibrary* library = [[ALAssetsLibrary alloc] init];
+        ALAssetsLibrary* library = [[[ALAssetsLibrary alloc] init] autorelease];
         
         UIImage *photo = [UIImage imageNamed:@"cover.png"];
         [library writeImageToSavedPhotosAlbum:photo.CGImage orientation:ALAssetOrientationUp completionBlock:^(NSURL *assetURL, NSError *error) {
@@ -222,7 +223,8 @@
 - (void)isAlive
 {
     NSTimeInterval time = [self.pingReceivedTime timeIntervalSinceDate:[NSDate date]];
-    if(abs(time) > 3)
+    int diff = abs(time);
+    if( diff > 3)
         [self openConnection];
     //NSLog(@"ping diff time: %d", abs(time));
 }
@@ -390,9 +392,11 @@
 {
     NSLog(@"webSocket did closed");
     
+    /*
     [self performSelector:@selector(openConnection)
                withObject:nil
                afterDelay:1.0];
+     */
 }
 
 #pragma mark - singleton implementation code
