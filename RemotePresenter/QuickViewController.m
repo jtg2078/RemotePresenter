@@ -92,19 +92,22 @@
     NSTimeInterval currentTime = self.player.currentPlaybackTime;
     int action = self.player.playbackState;
     
+    if (isnan(currentTime))
+        currentTime = 0.0f;
+    
     if(willResignActive == NO)
         [self.movieManager updatePlaybackInfo:movieId time:currentTime action:action];
 }
 
 - (void)playbackDidFinish:(NSNotification *)notif
 {
-    /*
+    
     int movieId = videoId;
     NSTimeInterval currentTime = self.player.currentPlaybackTime;
     int action = MPMoviePlaybackStateStopped;
     
     [self.movieManager updatePlaybackInfo:movieId time:currentTime action:action];
-     */
+    
     
     NSLog(@"playback finished");
 }
@@ -114,6 +117,8 @@
     NSTimeInterval currentTime = self.player.currentPlaybackTime;
     if (!isnan(currentTime))
         self.movieManager.currentMovieTimestamp = currentTime;
+    else
+        self.movieManager.currentMovieTimestamp = 0.0f;
 }
 
 #pragma mark - main methods

@@ -47,7 +47,7 @@
     return self;
 }
 
-- (void)setup
+- (void)setupPlayer
 {
     NSString *urlString = nil;
     if(IS_USING_WILL)
@@ -56,7 +56,7 @@
         
         if(IS_USING_LOCAL)
             urlString = [NSString stringWithFormat:@"ws://192.168.77.77/sync.ashx?username=%@", uuid];
-        else 
+        else
             urlString = [NSString stringWithFormat:@"ws://61.62.220.19:60080/WebSockets/chat.ashx?username=%@", uuid];
     }
     else
@@ -68,6 +68,11 @@
     NSURLRequest *request = [NSURLRequest requestWithURL:url];
     webSocket = [[SRWebSocket alloc] initWithURLRequest:request];
     webSocket.delegate = self;
+}
+
+- (void)setup
+{
+    [self setupPlayer];
     
     // register for application start up
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
@@ -136,7 +141,6 @@
 - (void)openConnection
 {
     [NSObject cancelPreviousPerformRequestsWithTarget:self];
-    
     [webSocket open];
 }
 
@@ -153,7 +157,7 @@
     
     NSMutableDictionary *detail = [NSMutableDictionary dictionary];
     [detail setObject:[NSNumber numberWithInt:videoId]      forKey:@"videoId"];
-    [detail setObject:[NSNumber numberWithInt:playbackTime] forKey:@"timestamp"];
+    [detail setObject:[NSNumber numberWithDouble:playbackTime] forKey:@"timestamp"];
     [detail setObject:[NSNumber numberWithInt:action]       forKey:@"action"];
     
     [p setObject:detail forKey:@"detail"];
@@ -225,8 +229,26 @@
     NSTimeInterval time = [self.pingReceivedTime timeIntervalSinceDate:[NSDate date]];
     int diff = abs(time);
     if( diff > 3)
-        [self openConnection];
-    //NSLog(@"ping diff time: %d", abs(time));
+    {
+        /*
+         _webSocket.delegate = nil;
+         [_webSocket close];
+         
+         _webSocket = [[SRWebSocket alloc] initWithURLRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"ws://localhost:9000/chat"]]];
+         _webSocket.delegate = self;
+         
+         self.title = @"Opening Connection...";
+         [_webSocket open];
+         */
+        
+        webSocket.delegate = nil;
+        [webSocket close];
+        [webSocket release];
+        
+        [self setupPlayer];
+        [webSocket open];
+    }
+    NSLog(@"ping diff time: %d", abs(time));
 }
 
 - (void)sendPing
@@ -285,7 +307,7 @@
     
     NSString *jsonString = (NSString *)message;
     
-    //NSLog(@"%@", jsonString);
+    NSLog(@"%@", jsonString);
     
     NSString *from = nil;
     

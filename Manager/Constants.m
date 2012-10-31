@@ -8,6 +8,6 @@
 
 #import "Constants.h"
 
-BOOL const IS_TEACHER_MODE = NO;
+BOOL const IS_TEACHER_MODE = YES;
 BOOL const IS_USING_WILL = YES;
 BOOL const IS_USING_LOCAL = YES;
