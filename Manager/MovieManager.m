@@ -230,23 +230,14 @@
     int diff = abs(time);
     if( diff > 3)
     {
-        /*
-         _webSocket.delegate = nil;
-         [_webSocket close];
-         
-         _webSocket = [[SRWebSocket alloc] initWithURLRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"ws://localhost:9000/chat"]]];
-         _webSocket.delegate = self;
-         
-         self.title = @"Opening Connection...";
-         [_webSocket open];
-         */
-        
         webSocket.delegate = nil;
         [webSocket close];
         [webSocket release];
         
         [self setupPlayer];
         [webSocket open];
+        
+        self.pingReceivedTime = [NSDate date];
     }
     NSLog(@"ping diff time: %d", abs(time));
 }
@@ -275,7 +266,7 @@
 {
     [self openConnection];
     
-    self.timer1 = [NSTimer timerWithTimeInterval:2.0
+    self.timer1 = [NSTimer timerWithTimeInterval:10.0
                                           target:self
                                         selector:@selector(isAlive)
                                         userInfo:nil
@@ -413,12 +404,6 @@
          wasClean:(BOOL)wasClean
 {
     NSLog(@"webSocket did closed");
-    
-    /*
-    [self performSelector:@selector(openConnection)
-               withObject:nil
-               afterDelay:1.0];
-     */
 }
 
 #pragma mark - singleton implementation code

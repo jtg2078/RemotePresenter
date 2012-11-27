@@ -13,6 +13,7 @@
 @interface ListViewController : UITableViewController
 {
     MovieManager *movieManager;
+    int lastSelectedRow;
 }
 
 @property (nonatomic, assign) QuickViewController *qvc;

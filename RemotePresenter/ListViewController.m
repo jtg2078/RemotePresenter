@@ -94,9 +94,21 @@
 
 #pragma mark - Table view delegate
 
+- (NSIndexPath *)tableView:(UITableView *)tableView willSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSIndexPath *currentSelected = tableView.indexPathForSelectedRow;
+    
+    if(currentSelected == nil)
+        return indexPath;
+    else if(currentSelected.row == indexPath.row)
+        return nil;
+    else
+        return indexPath;
+}
+
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    [self.tableView deselectRowAtIndexPath:indexPath animated:YES];
+    //[self.tableView deselectRowAtIndexPath:indexPath animated:YES];
     
     [self.qvc playMovie:[movieManager.moviesArray objectAtIndex:indexPath.row]
                 movieId:indexPath.row];

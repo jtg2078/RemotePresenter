@@ -148,6 +148,9 @@
     NSTimeInterval currentTime = self.player.currentPlaybackTime;
     int action = self.player.playbackState;
     
+    if (isnan(currentTime))
+        return;
+    
     [self.movieManager updatePlaybackInfo:movieId time:currentTime action:action];
 }
 
@@ -156,6 +159,9 @@
     int movieId = videoId;
     NSTimeInterval currentTime = self.player.currentPlaybackTime;
     int action = MPMoviePlaybackStateStopped;
+    
+    if (isnan(currentTime))
+        currentTime = 0.0f;
     
     [self.movieManager updatePlaybackInfo:movieId time:currentTime action:action];
 }
